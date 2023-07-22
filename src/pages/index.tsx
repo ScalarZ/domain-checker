@@ -1,118 +1,189 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
+import { Inter } from "next/font/google";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import useChecker from "@/hooks/useChecker";
+import { useDebounce } from "@/hooks/useDebounce";
+import { CheckCircle2, XCircle, Heart, Trash } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import Skeleton from "@/components/Skeleton";
 
-const inter = Inter({ subsets: ['latin'] })
+interface Data {
+  domain: string;
+  result: "registered" | "available" | "error" | null;
+}
 
+const inter = Inter({ subsets: ["latin"] });
+const STORAGE_KEY = "saved-domains";
 export default function Home() {
+  const [value, setValue] = useState<string>("");
+  const [savedDomains, setSavedDomains] = useState<Data[]>([]);
+  const { data, setDomain, reset } = useChecker();
+  const debouncedValue = useDebounce<string>(value, 2000);
+
+  useEffect(() => {
+    const item = localStorage.getItem(STORAGE_KEY);
+    if (item) {
+      const domains = JSON.parse(item) as Data[];
+      setSavedDomains(domains);
+    }
+  }, []);
+
+  useEffect(() => {
+    const validUrlRegex = /^[\w.-]+\.(?:com|net|org|co|info|us|eu|blog)$/;
+    const startsWithHttpRegex = /^https?:\/\//;
+    setDomain(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedValue]);
   return (
     <main
-      className={`flex min-h-screen flex-col items-center justify-between p-24 ${inter.className}`}
+      className={`px-8 py-8 min-h-screen text-slate-950 ${inter.className}`}
     >
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+      <header className="mx-auto max-w-4xl">
+        <div className="mb-8 w-full flex justify-between items-center">
+          <h1 className="text-2xl text-center font-semibold">
+            Domain Checker 🚀
+          </h1>
+          <SheetDemo
+            savedDomains={savedDomains}
+            setSavedDomains={setSavedDomains}
+          />
         </div>
-      </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+        <div className="flex gap-x-2">
+          <Input
+            placeholder="Type here..."
+            value={value}
+            onChange={(e) => {
+              reset();
+              setValue(e.target.value);
+            }}
+          />
+          {/* <Button>Search</Button> */}
+        </div>
+      </header>
+      <h2
+        className={`mt-8 text-3xl text-center ${
+          data[0]
+            ? data[0].result === "available"
+              ? "text-green-500"
+              : "text-red-500"
+            : "text-slate-500"
+        } font-bold`}
+      >
+        {value ? value + ".com" : null}
+      </h2>
+      <div className="relative mx-auto mt-8 h-44 max-w-2xl flex flex-col gap-y-4">
+        {!!value && <Skeleton />}
+        {value &&
+          data.map(({ domain, result }, i) => {
+            if (i === 0) return;
+            return (
+              <div
+                key={i}
+                className={`relative px-4 py-2 w-full bg-white border shadow-md shadow-slate-200 rounded flex justify-between items-center z-20`}
+              >
+                <p className="text-lg">{domain}</p>
+                <div className="flex items-center gap-x-1">
+                  <div
+                    className={`${
+                      result === "available" ? "text-green-500" : "text-red-600"
+                    }`}
+                  >
+                    {result === "available" ? (
+                      <CheckCircle2 className="text-green-500" />
+                    ) : (
+                      <XCircle className="text-red-500" />
+                    )}
+                  </div>
+                  <Heart
+                    className={`cursor-pointer hover:fill-red-500 hover:text-red-500 ${
+                      savedDomains.some(({ domain: d }) => d === domain) &&
+                      "fill-red-500 text-red-500"
+                    }`}
+                    onClick={() => {
+                      const newDomain = { result, domain };
+                      setSavedDomains((prev) => [...prev, newDomain]);
+                      localStorage.setItem(
+                        STORAGE_KEY,
+                        JSON.stringify([...savedDomains, newDomain])
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
       </div>
     </main>
-  )
+  );
+}
+
+function SheetDemo({
+  savedDomains,
+  setSavedDomains,
+}: {
+  savedDomains: Data[];
+  setSavedDomains: Dispatch<SetStateAction<Data[]>>;
+}) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">
+          Saved domains{" "}
+          <span className="ml-4 px-2 py-1 rounded bg-slate-950 text-xs text-white">
+            {savedDomains.length}
+          </span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Saved domains</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4 flex flex-col gap-y-2">
+          {savedDomains.map(({ result, domain }, i) => (
+            <div
+              key={i}
+              className={`relative px-4 py-2 bg-white border shadow-md shadow-slate-200 rounded flex justify-between items-center z-20`}
+            >
+              <p className="text-lg">{domain}</p>
+              <div className="flex items-center gap-x-1">
+                <div
+                  className={`${
+                    result === "available" ? "text-green-500" : "text-red-600"
+                  }`}
+                >
+                  {result === "available" ? (
+                    <CheckCircle2 className="text-green-500" />
+                  ) : (
+                    <XCircle className="text-red-500" />
+                  )}
+                </div>
+                <Trash
+                  className={`cursor-pointer hover:text-red-500`}
+                  onClick={() => {
+                    setSavedDomains((prev) =>
+                      prev.filter(({ domain: d }) => d !== domain)
+                    );
+                    localStorage.setItem(
+                      STORAGE_KEY,
+                      JSON.stringify(
+                        savedDomains.filter(({ domain: d }) => d !== domain)
+                      )
+                    );
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }
