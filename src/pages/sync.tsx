@@ -2,7 +2,7 @@ import { useState, useEffect, type Dispatch, type SetStateAction } from "react";
 import { Inter } from "next/font/google";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import useChecker from "@/hooks/useChecker";
+import useSyncChecker from "@/hooks/useSyncChecker";
 import { useDebounce } from "@/hooks/useDebounce";
 import { CheckCircle2, XCircle, Heart, Trash } from "lucide-react";
 import {
@@ -18,65 +18,14 @@ interface Data {
   domain: string;
   result: "registered" | "available" | "error" | null;
 }
-type FetchResult = { data: Data };
-
-async function fetchWithTimeout(
-  url: string,
-  timeout: number
-): Promise<FetchResult> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  const myHeaders = new Headers();
-  myHeaders.append("apikey", "gHq856gDHB7bZwXvYUb0AhFa785kldfS");
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      method: "GET",
-      redirect: "follow",
-      headers: myHeaders,
-    });
-    const data = await response.json();
-    console.log(url);
-    clearTimeout(timeoutId);
-    return {
-      data: {
-        result: data.result,
-        domain: url.replace("https://api.apilayer.com/whois/check?domain=", ""),
-      },
-    };
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.log(error);
-    return {
-      data: {
-        domain: url.replace("https://api.apilayer.com/whois/check?domain=", ""),
-        result: "error",
-      },
-    };
-  }
-}
-
-const extensions = [
-  ".com",
-  ".org",
-  ".co",
-  ".net",
-  ".info",
-  ".us",
-  ".eu",
-  ".blog",
-];
 
 const inter = Inter({ subsets: ["latin"] });
 const STORAGE_KEY = "saved-domains";
 export default function Home() {
   const [value, setValue] = useState<string>("");
   const [savedDomains, setSavedDomains] = useState<Data[]>([]);
-  // const { data, setDomain, reset } = useChecker();
+  const { data, setDomain, reset } = useSyncChecker();
   const debouncedValue = useDebounce<string>(value, 2000);
-  const [results, setResults] = useState<Data[]>([]);
-
-  type FetchResult = { data: any } | { error: any };
 
   useEffect(() => {
     const item = localStorage.getItem(STORAGE_KEY);
@@ -87,28 +36,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!debouncedValue) return;
     const validUrlRegex = /^[\w.-]+\.(?:com|net|org|co|info|us|eu|blog)$/;
     const startsWithHttpRegex = /^https?:\/\//;
-    const urls = extensions.map(
-      (extension) =>
-        `https://api.apilayer.com/whois/check?domain=${debouncedValue}${extension}`
-    );
-
-    const fetchPromises = urls.map((url) => fetchWithTimeout(url, 2000));
-
-    async function fetchAllWithRetry() {
-      try {
-        const res = await Promise.all(fetchPromises);
-        console.log(res);
-        setResults(res.map(({ data }) => data));
-      } catch (err) {
-        console.log(err);
-      }
-    }
-
-    fetchAllWithRetry();
-
+    setDomain(value);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedValue]);
   return (
@@ -131,7 +61,7 @@ export default function Home() {
             placeholder="Type here..."
             value={value}
             onChange={(e) => {
-              setResults([]);
+              reset();
               setValue(e.target.value);
             }}
           />
@@ -140,8 +70,8 @@ export default function Home() {
       </header>
       <h2
         className={`mt-8 text-3xl text-center ${
-          results[0]
-            ? results[0].result === "available"
+          data[0]
+            ? data[0].result === "available"
               ? "text-green-500"
               : "text-red-500"
             : "text-slate-500"
@@ -152,7 +82,7 @@ export default function Home() {
       <div className="relative mx-auto mt-8 h-44 max-w-2xl flex flex-col gap-y-4">
         {!!value && <Skeleton />}
         {value &&
-          results.map(({ domain, result }, i) => {
+          data.map(({ domain, result }, i) => {
             if (i === 0) return;
             return (
               <div

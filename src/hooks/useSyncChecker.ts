@@ -62,9 +62,15 @@ export default function useChecker() {
   async function checkDomain() {
     setData([]);
     await fetchData(domain + extensions[0]);
-    const res = (await Promise.allSettled(
-      extensions.slice(1).map((extension) => fetchData(domain + extension))
-    )) as { value: Data }[];
+    const res = (await Promise.allSettled([
+      await fetchData(domain + extensions[1]),
+      await fetchData(domain + extensions[2]),
+      await fetchData(domain + extensions[3]),
+      await fetchData(domain + extensions[4]),
+      await fetchData(domain + extensions[5]),
+      await fetchData(domain + extensions[6]),
+      await fetchData(domain + extensions[7]),
+    ])) as { value: Data }[];
     setData((prev) => [
       ...prev,
       ...res.map(({ value }) => value).filter(setUnique),
