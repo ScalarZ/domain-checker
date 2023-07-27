@@ -5,76 +5,20 @@ import { Button } from "@/components/ui/button";
 import useChecker from "@/hooks/useChecker";
 import { useDebounce } from "@/hooks/useDebounce";
 import { CheckCircle2, XCircle, Heart, Trash } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import Skeleton from "@/components/Skeleton";
-
-interface Data {
-  domain: string;
-  result: "registered" | "available" | "error" | null;
-}
-type FetchResult = { data: Data };
-
-async function fetchWithTimeout(
-  url: string,
-  timeout: number
-): Promise<FetchResult> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-  const myHeaders = new Headers();
-  myHeaders.append("apikey", "gHq856gDHB7bZwXvYUb0AhFa785kldfS");
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      method: "GET",
-      redirect: "follow",
-      headers: myHeaders,
-    });
-    const data = await response.json();
-    console.log(url);
-    clearTimeout(timeoutId);
-    return {
-      data: {
-        result: data.result,
-        domain: url.replace("https://api.apilayer.com/whois/check?domain=", ""),
-      },
-    };
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.log(error);
-    return {
-      data: {
-        domain: url.replace("https://api.apilayer.com/whois/check?domain=", ""),
-        result: "error",
-      },
-    };
-  }
-}
-
-const extensions = [
-  ".com",
-  ".org",
-  ".co",
-  ".net",
-  ".info",
-  ".us",
-  ".eu",
-  ".blog",
-];
+import { ModeToggle } from "@/components/ModeToggle";
+import SideBar from "@/components/SideBar";
+import { Data } from "@/types";
+import Domain from "@/components/Domain";
 
 const inter = Inter({ subsets: ["latin"] });
 const STORAGE_KEY = "saved-domains";
+
 export default function Home() {
   const [value, setValue] = useState<string>("");
   const [savedDomains, setSavedDomains] = useState<Data[]>([]);
-  // const { data, setDomain, reset } = useChecker();
+  const { data, setDomain, reset } = useChecker();
   const debouncedValue = useDebounce<string>(value, 2000);
-  const [results, setResults] = useState<Data[]>([]);
 
   type FetchResult = { data: any } | { error: any };
 
@@ -87,28 +31,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!debouncedValue) return;
-    const validUrlRegex = /^[\w.-]+\.(?:com|net|org|co|info|us|eu|blog)$/;
-    const startsWithHttpRegex = /^https?:\/\//;
-    const urls = extensions.map(
-      (extension) =>
-        `https://api.apilayer.com/whois/check?domain=${debouncedValue}${extension}`
-    );
-
-    const fetchPromises = urls.map((url) => fetchWithTimeout(url, 2000));
-
-    async function fetchAllWithRetry() {
-      try {
-        const res = await Promise.all(fetchPromises);
-        console.log(res);
-        setResults(res.map(({ data }) => data));
-      } catch (err) {
-        console.log(err);
-      }
-    }
-
-    fetchAllWithRetry();
-
+    if (debouncedValue) setDomain(debouncedValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedValue]);
   return (
@@ -117,143 +40,65 @@ export default function Home() {
     >
       <header className="mx-auto max-w-4xl">
         <div className="mb-8 w-full flex justify-between items-center">
-          <h1 className="text-2xl text-center font-semibold">
+          <h1 className="text-2xl text-center font-semibold dark:text-slate-100">
             Domain Checker 🚀
           </h1>
-          <SheetDemo
-            savedDomains={savedDomains}
-            setSavedDomains={setSavedDomains}
-          />
+          <div className="flex items-center gap-x-2">
+            <SideBar
+              savedDomains={savedDomains}
+              setSavedDomains={setSavedDomains}
+            />
+            <ModeToggle />
+          </div>
         </div>
-
         <div className="flex gap-x-2">
           <Input
             placeholder="Type here..."
             value={value}
             onChange={(e) => {
-              setResults([]);
               setValue(e.target.value);
             }}
+            className="dark:text-white"
           />
-          {/* <Button>Search</Button> */}
         </div>
       </header>
       <h2
         className={`mt-8 text-3xl text-center ${
-          results[0]
-            ? results[0].result === "available"
+          data[0]
+            ? data[0].result === "available"
               ? "text-green-500"
               : "text-red-500"
-            : "text-slate-500"
+            : "text-slate-500 dark:text-slate-300"
         } font-bold`}
       >
         {value ? value + ".com" : null}
       </h2>
       <div className="relative mx-auto mt-8 h-44 max-w-2xl flex flex-col gap-y-4">
-        {!!value && <Skeleton />}
-        {value &&
-          results.map(({ domain, result }, i) => {
-            if (i === 0) return;
+        {!value || data.length ? (
+          data.map(({ domain, result }, i) => {
             return (
-              <div
-                key={i}
-                className={`relative px-4 py-2 w-full bg-white border shadow-md shadow-slate-200 rounded flex justify-between items-center z-20`}
-              >
-                <p className="text-lg">{domain}</p>
-                <div className="flex items-center gap-x-1">
-                  <div
-                    className={`${
-                      result === "available" ? "text-green-500" : "text-red-600"
-                    }`}
-                  >
-                    {result === "available" ? (
-                      <CheckCircle2 className="text-green-500" />
-                    ) : (
-                      <XCircle className="text-red-500" />
-                    )}
-                  </div>
-                  <Heart
-                    className={`cursor-pointer hover:fill-red-500 hover:text-red-500 ${
-                      savedDomains.some(({ domain: d }) => d === domain) &&
-                      "fill-red-500 text-red-500"
-                    }`}
-                    onClick={() => {
-                      const newDomain = { result, domain };
-                      setSavedDomains((prev) => [...prev, newDomain]);
-                      localStorage.setItem(
-                        STORAGE_KEY,
-                        JSON.stringify([...savedDomains, newDomain])
-                      );
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-      </div>
-    </main>
-  );
-}
-
-function SheetDemo({
-  savedDomains,
-  setSavedDomains,
-}: {
-  savedDomains: Data[];
-  setSavedDomains: Dispatch<SetStateAction<Data[]>>;
-}) {
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline">
-          Saved domains{" "}
-          <span className="ml-4 px-2 py-1 rounded bg-slate-950 text-xs text-white">
-            {savedDomains.length}
-          </span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Saved domains</SheetTitle>
-        </SheetHeader>
-        <div className="mt-4 flex flex-col gap-y-2">
-          {savedDomains.map(({ result, domain }, i) => (
-            <div
-              key={i}
-              className={`relative px-4 py-2 bg-white border shadow-md shadow-slate-200 rounded flex justify-between items-center z-20`}
-            >
-              <p className="text-lg">{domain}</p>
-              <div className="flex items-center gap-x-1">
-                <div
-                  className={`${
-                    result === "available" ? "text-green-500" : "text-red-600"
+              <Domain key={i} domain={domain} result={result}>
+                <Heart
+                  className={`cursor-pointer hover:fill-red-500 hover:text-red-500 ${
+                    savedDomains.some(({ domain: d }) => d === domain) &&
+                    "fill-red-500 text-red-500"
                   }`}
-                >
-                  {result === "available" ? (
-                    <CheckCircle2 className="text-green-500" />
-                  ) : (
-                    <XCircle className="text-red-500" />
-                  )}
-                </div>
-                <Trash
-                  className={`cursor-pointer hover:text-red-500`}
                   onClick={() => {
-                    setSavedDomains((prev) =>
-                      prev.filter(({ domain: d }) => d !== domain)
-                    );
+                    const newDomain = { result, domain };
+                    setSavedDomains((prev) => [...prev, newDomain]);
                     localStorage.setItem(
                       STORAGE_KEY,
-                      JSON.stringify(
-                        savedDomains.filter(({ domain: d }) => d !== domain)
-                      )
+                      JSON.stringify([...savedDomains, newDomain])
                     );
                   }}
                 />
-              </div>
-            </div>
-          ))}
-        </div>
-      </SheetContent>
-    </Sheet>
+              </Domain>
+            );
+          })
+        ) : (
+          <Skeleton />
+        )}
+      </div>
+    </main>
   );
 }
